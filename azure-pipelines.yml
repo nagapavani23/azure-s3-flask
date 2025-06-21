@@ -1,0 +1,56 @@
+trigger:
+  branches:
+    include:
+      - main
+
+variables:
+  imageName: 'flask-app'
+  acrName: '<your-acr-name>'
+  acrLoginServer: '$(acrName).azurecr.io'
+  kubernetesNamespace: 'default'
+
+stages:
+- stage: Build
+  displayName: Build and Push Docker Image
+  jobs:
+  - job: Build
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: Docker@2
+      displayName: Build and Push
+      inputs:
+        command: buildAndPush
+        containerRegistry: '<your-acr-service-connection-name>'
+        repository: $(acrLoginServer)/$(imageName)
+        dockerfile: '**/Dockerfile'
+        tags: |
+          $(Build.BuildId)
+
+- stage: Deploy
+  displayName: Deploy to AKS
+  dependsOn: Build
+  jobs:
+  - job: Deploy
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: Kubernetes@1
+      displayName: Set AKS Context
+      inputs:
+        connectionType: 'Azure Resource Manager'
+        azureSubscription: '<your-subscription>'
+        azureResourceGroup: '<your-resource-group>'
+        kubernetesCluster: '<your-aks-cluster-name>'
+        useClusterAdmin: true
+
+    - task: KubernetesManifest@1
+      displayName: Deploy to AKS
+      inputs:
+        action: deploy
+        namespace: $(kubernetesNamespace)
+        manifests: |
+          kubernetes/deployment.yaml
+          kubernetes/service.yaml
+        containers: |
+          $(acrLoginServer)/$(imageName):$(Build.BuildId)
