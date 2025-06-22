@@ -1,9 +1,10 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: flask-app
 spec:
-  replicas: 2
+  replicas: 1
   selector:
     matchLabels:
       app: flask-app
@@ -13,7 +14,18 @@ spec:
         app: flask-app
     spec:
       containers:
-      - name: flask-app
-        image: <your-acr-name>.azurecr.io/flask-app:$(Build.BuildId)
+      - name: flask-container
+        image: s3app.azurecr.io/flask-app:$(Build.BuildId)
         ports:
         - containerPort: 5000
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: AWS_SECRET_ACCESS_KEY
