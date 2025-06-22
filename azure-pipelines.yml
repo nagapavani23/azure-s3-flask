@@ -1,6 +1,3 @@
-trigger:
-- main
-
 variables:
   imageName: 'flask-app'
 
@@ -14,13 +11,13 @@ stages:
     steps:
     - task: AzureCLI@2
       inputs:
-        azureSubscription: '<your-service-connection-name>'
+        azureSubscription: az-s3
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          az acr login --name <acr-name>
-          docker build -t <acr-name>.azurecr.io/$(imageName):$(Build.BuildId) .
-          docker push <acr-name>.azurecr.io/$(imageName):$(Build.BuildId)
+          az acr login --name s3app
+          docker build -t s3app.azurecr.io/$(imageName):$(Build.BuildId) .
+          docker push s3app.azurecr.io/$(imageName):$(Build.BuildId)
 
 - stage: Deploy
   displayName: Deploy to AKS
@@ -32,11 +29,18 @@ stages:
     steps:
     - task: AzureCLI@2
       inputs:
-        azureSubscription: '<your-service-connection-name>'
+        azureSubscription: az-s3
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          az aks get-credentials --resource-group <resource-group> --name <aks-name>
-          sed -i "s|<ACR_NAME>.azurecr.io|<acr-name>.azurecr.io|g" manifests/deployment.yaml
-          kubectl apply -f manifests/deployment.yaml
-          kubectl apply -f manifests/service.yaml
+          az aks get-credentials --resource-group pavani --name s3cluster
+          
+          # Optional: apply secrets
+          # kubectl apply -f kubernetes/secrets.yaml
+
+          # Update deployment image tag
+          sed -i "s|s3app.azurecr.io/flask-app:.*|s3app.azurecr.io/flask-app:$(Build.BuildId)|g" kubernetes/deployment.yaml
+
+          kubectl apply -f kubernetes/deployment.yaml
+          kubectl apply -f kubernetes/service.yaml
+          kubectl apply -f kubernetes/secrets.yaml
