@@ -2,6 +2,9 @@ variables:
   imageName: 'flask-app'
 
 stages:
+# ------------------------
+# 🏗️ Build & Push Stage
+# ------------------------
 - stage: Build
   displayName: Build and Push to ACR
   jobs:
@@ -10,6 +13,7 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - task: AzureCLI@2
+      displayName: 'Build and Push Docker Image'
       inputs:
         azureSubscription: az-s3
         scriptType: bash
@@ -19,6 +23,22 @@ stages:
           docker build -t s3app.azurecr.io/$(imageName):$(Build.BuildId) .
           docker push s3app.azurecr.io/$(imageName):$(Build.BuildId)
 
+    # 🔧 Update deployment manifest with image tag
+    - script: |
+        sed -i "s|s3app.azurecr.io/flask-app:.*|s3app.azurecr.io/flask-app:$(Build.BuildId)|g" kubernetes/deployment.yaml
+      displayName: 'Update Image Tag in deployment.yaml'
+
+    # 📦 Publish YAML manifests as artifact
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Kubernetes Manifests'
+      inputs:
+        PathtoPublish: 'kubernetes'
+        ArtifactName: 'drop'
+        publishLocation: 'Container'
+
+# ------------------------
+# 🚀 Deploy Stage (Release)
+# ------------------------
 - stage: Deploy
   displayName: Deploy to AKS
   dependsOn: Build
@@ -27,20 +47,26 @@ stages:
     pool:
       vmImage: 'ubuntu-latest'
     steps:
+    - task: DownloadBuildArtifacts@0
+      displayName: 'Download Kubernetes Manifests'
+      inputs:
+        buildType: 'current'
+        downloadType: 'single'
+        artifactName: 'drop'
+        downloadPath: '$(System.ArtifactsDirectory)'
+
     - task: AzureCLI@2
+      displayName: 'Deploy to AKS'
       inputs:
         azureSubscription: az-s3
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
           az aks get-credentials --resource-group pavani --name s3cluster
-          
-          # Optional: apply secrets
-          # kubectl apply -f kubernetes/secrets.yaml
 
-          # Update deployment image tag
-          sed -i "s|s3app.azurecr.io/flask-app:.*|s3app.azurecr.io/flask-app:$(Build.BuildId)|g" kubernetes/deployment.yaml
+          cd $(System.ArtifactsDirectory)/drop
 
-          kubectl apply -f kubernetes/deployment.yaml
-          kubectl apply -f kubernetes/service.yaml
-          kubectl apply -f kubernetes/secrets.yaml
+          # Apply manifests
+          kubectl apply -f secrets.yaml
+          kubectl apply -f deployment.yaml
+          kubectl apply -f service.yaml
