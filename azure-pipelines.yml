@@ -19,34 +19,24 @@ stages:
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          echo "🔐 Logging into Azure Container Registry..."
           az acr login --name s3app
+          docker build -t s3app.azurecr.io/$(imageName):$(Build.BuildId) .
+          docker push s3app.azurecr.io/$(imageName):$(Build.BuildId)
 
-          echo "⚙️ Setting up Docker Buildx..."
-          docker buildx create --use || true
-
-          echo "🐳 Building and pushing Docker image for linux/amd64..."
-          docker buildx build \
-            --platform linux/amd64 \
-            -t s3app.azurecr.io/$(imageName):$(Build.BuildId) \
-            --push .
-
-    # 🔧 Update deployment manifest with actual image tag
     - script: |
-        echo "🔄 Replacing placeholder image tag in deployment.yaml..."
-        sed -i "s|__BUILD_TAG__|$(Build.BuildId)|g" kubernetes/deployment.yaml
-      displayName: 'Replace Image Tag in deployment.yaml'
+        echo "Replacing IMAGE_TAG_PLACEHOLDER with $(Build.BuildId)..."
+        sed -i "s|IMAGE_TAG_PLACEHOLDER|$(Build.BuildId)|g" kubernetes/deployment.yaml
+      displayName: 'Replace IMAGE_TAG_PLACEHOLDER in deployment.yaml'
 
-    # 📦 Publish YAML manifests as artifact
     - task: PublishBuildArtifacts@1
-      displayName: 'Publish Kubernetes Manifests'
+      displayName: 'Publish Kubernetes YAMLs'
       inputs:
         PathtoPublish: 'kubernetes'
         ArtifactName: 'drop'
         publishLocation: 'Container'
 
 # ------------------------
-# 🚀 Deploy Stage (Release)
+# 🚀 Deploy Stage
 # ------------------------
 - stage: Deploy
   displayName: Deploy to AKS
@@ -57,7 +47,7 @@ stages:
       vmImage: 'ubuntu-latest'
     steps:
     - task: DownloadBuildArtifacts@0
-      displayName: 'Download Kubernetes Manifests'
+      displayName: 'Download Kubernetes YAMLs'
       inputs:
         buildType: 'current'
         downloadType: 'single'
@@ -71,12 +61,8 @@ stages:
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
-          echo "🔑 Getting AKS credentials..."
           az aks get-credentials --resource-group pavani --name s3cluster
-
-          echo "🚀 Applying Kubernetes manifests..."
           cd $(System.ArtifactsDirectory)/drop
-
           kubectl apply -f secrets.yaml
           kubectl apply -f deployment.yaml
           kubectl apply -f service.yaml
