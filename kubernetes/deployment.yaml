@@ -1,30 +1,24 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: flask-app
+  name: s3-file-manager
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: flask-app
+      app: s3-file-manager
   template:
     metadata:
       labels:
-        app: flask-app
+        app: s3-file-manager
     spec:
+      imagePullSecrets:
+      - name: acr-secret
       containers:
-      - name: flask-container
-        image: s3app.azurecr.io/flask-app:8
+      - name: flask-s3-app
+        image: s3app.azurecr.io/flask-app:IMAGE_TAG_PLACEHOLDER
         ports:
         - containerPort: 5000
-        env:
-        - name: AWS_ACCESS_KEY_ID
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: AWS_ACCESS_KEY_ID
-        - name: AWS_SECRET_ACCESS_KEY
-          valueFrom:
-            secretKeyRef:
-              name: aws-credentials
-              key: AWS_SECRET_ACCESS_KEY
+        envFrom:
+        - secretRef:
+            name: aws-credentials
