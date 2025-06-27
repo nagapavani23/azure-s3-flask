@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: flask-container
-        image: s3app.azurecr.io/flask-app:__BUILD_TAG__
+        image: s3app.azurecr.io/flask-app:8
         ports:
         - containerPort: 5000
         env:
