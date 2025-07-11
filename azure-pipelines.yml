@@ -1,8 +1,5 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
 # azure-pipelines.yml
+
 trigger:
 - main
 
@@ -10,6 +7,7 @@ variables:
   imageName: 'flaskapp'
 
 stages:
+# CI Stage: Build and Push to ACR
 - stage: BuildAndPush
   jobs:
   - job: Build
@@ -29,3 +27,21 @@ stages:
           docker tag $(imageName):$(Build.BuildId) azflaskregistry.azurecr.io/$(imageName):$(Build.BuildId)
           docker push azflaskregistry.azurecr.io/$(imageName):$(Build.BuildId)
 
+# CD Stage: Deploy to AKS
+- stage: Deploy
+  dependsOn: BuildAndPush
+  jobs:
+  - job: Deploy
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: Kubernetes@1
+      inputs:
+        connectionType: 'Azure Resource Manager'
+        azureSubscription: 'azure-connection'
+        azureResourceGroup: 'pavani'
+        kubernetesCluster: 'azflask'
+        namespace: 'default'
+        command: apply
+        useConfigurationFile: true
+        configuration: 'deployment.yaml'
