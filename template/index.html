@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 File Manager</title>
+    <style>
+    .form-group {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+form {
+    margin: 10px 0;
+    width: 50%;
+    height: 50%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    background-color: #f8f8f8;
+    padding: 15px;
+    border-radius: 4px;
+}
+
+input, button {
+    width: 50%;
+    padding: 8px;
+    margin: 5px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+button {
+    background-color: #22b9be;
+    color: white;
+    border: none;
+}
+
+pre {
+    background-color: #f8f8f8;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 10px;
+}
+
+h3 {
+    margin: 0;
+    padding: 5px 0;
+    text-align: left;
+    color: #333;
+}
+
+    </style>
+</head>
+<body>
+    <!-- Upload and Delete Files (Side by Side) -->
+<div class="form-group">
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        <h3>Upload File</h3>
+        <input type="text" name="bucket_name" placeholder="Bucket Name" required>
+        <input type="file" name="file" required>
+        <button type="submit">Upload</button>
+    </form>
+
+    <form action="/delete" method="post">
+        <h3>Delete File</h3>
+        <input type="text" name="bucket_name" placeholder="Bucket Name" required>
+        <input type="text" name="file_name" placeholder="File Name" required>
+        <button type="submit">Delete</button>
+    </form>
+</div>
+
+<!-- Create and Delete Bucket (Side by Side) -->
+<div class="form-group">
+    <form action="/create_bucket" method="post">
+        <h3>Create Bucket</h3>
+        <input type="text" name="bucket_name" placeholder="Bucket Name">
+        <input type="text" name="region" placeholder="Region (e.g., eu-north-1)">
+        <button type="submit">Create</button>
+    </form>
+
+    <form action="/delete_bucket" method="post">
+        <h3>Delete Bucket</h3>
+        <input type="text" name="bucket_name" placeholder="Bucket Name" required>
+        <button type="submit">Delete</button>
+    </form>
+</div>
+
+<!-- Create and Delete Folder (Side by Side) -->
+<div class="form-group">
+    <form action="/create_folder" method="post">
+        <h3>Create Folder</h3>
+        <input type="text" name="bucket_name" placeholder="Bucket Name" required>
+        <input type="text" name="folder_name" placeholder="Folder Name" required>
+        <button type="submit">Create</button>
+    </form>
+
+    <form action="/delete_folder" method="post">
+        <h3>Delete Folder</h3>
+        <input type="text" name="bucket_name" placeholder="Bucket Name" required>
+        <input type="text" name="folder_name" placeholder="Folder Name" required>
+        <button type="submit">Delete</button>
+    </form>
+</div>
+
+<!-- Copy File and List Files (Side by Side) -->
+<div class="form-group">
+    <form action="/copy_file" method="post">
+        <h3>Copy File</h3>
+        <input type="text" name="source_bucket" placeholder="Source Bucket Name" required>
+        <input type="text" name="source_key" placeholder="Source File Key" required>
+        <input type="text" name="destination_bucket" placeholder="Destination Bucket Name" required>
+        <input type="text" name="destination_key" placeholder="Destination File Key" required>
+        <button type="submit">Copy</button>
+    </form>
+
+    <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+        <h3>List Files</h3>
+        <input type="text" id="bucket_name" placeholder="Bucket Name" required>
+        <button onclick="listFiles()">Show Files</button>
+        <pre id="file-list"></pre>
+    </div>
+</div>
+
+
+    <script>
+        async function listFiles() {
+            let bucketName = document.getElementById("bucket_name").value;
+            if (!bucketName) {
+                alert("Please enter a bucket name");
+                return;
+            }
+            let response = await fetch(`/list?bucket_name=${bucketName}`);
+            let files = await response.json();
+            document.getElementById("file-list").innerText = JSON.stringify(files, null, 2);
+        }
+    </script>
+</body>
+</html>
