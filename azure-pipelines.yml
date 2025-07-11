@@ -20,7 +20,7 @@ stages:
 
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'nagapavani23'
+        azureSubscription: 'azure-connection'
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
