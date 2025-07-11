@@ -18,7 +18,7 @@ stages:
 
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'azure-connection'
+        azureSubscriptionEndpoint: 'azure-connection'
         scriptType: bash
         scriptLocation: inlineScript
         inlineScript: |
@@ -38,7 +38,7 @@ stages:
     - task: Kubernetes@1
       inputs:
         connectionType: 'Azure Resource Manager'
-        azureSubscription: 'azure-connection'
+        azureSubscriptionEndpoint: 'azure-connection'
         azureResourceGroup: 'pavani'
         kubernetesCluster: 'azflask'
         namespace: 'default'
